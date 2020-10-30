@@ -1,17 +1,9 @@
 import knowledgeBase as kb
-import pprint
+from MusicXMLParse import *
 
 
-class Measure:
-
-    def __init__(self, xml_measure: dict):
-        print('created measure')
-        pprint.pprint(xml_measure)
-        self.notes = []
-
-
-# Calculate the music)xml dominant key
-def dominant_key(measures: [dict]):
+# Calculate the musicXML dominant key
+def dominant_key(measures: [Measure]):
     # note frequency calculation
     note_count = []
 
@@ -19,21 +11,19 @@ def dominant_key(measures: [dict]):
         note_count.append(0)
 
     for measure in measures:
-        for note in measure['note']:
+        for note in measure.notes:
             try:
-                note_index = kb.NOTES.index(note['pitch']['step']) if 'alter' not in note['pitch'].keys() \
-                    else kb.NOTES.index(note['pitch']['step']) + int(note['pitch']['alter'])
                 # Extra weight for first and last note
-                if (measures.index(measure) == 0 and measure['note'].index(note) == 0) \
+                if (measures.index(measure) == 0 and measure.notes.index(note) == 0) \
                         or (measures.index(measure) == len(measures) - 1
-                            and measure['note'].index(note) == len(measure['note']) - 1):
-                    note_count[note_index] += int(note['duration']) * 2
+                            and measure.notes.index(note) == len(measure.notes) - 1):
+                    note_count[note.chroma] += int(note.duration) * 2
                 # Minor extra weight for strong beat note (first note in measure)
-                elif measure['note'].index(note) == 0:
-                    note_count[note_index] += int(note['duration']) + 1
+                elif measure.notes.index(note) == 0:
+                    note_count[note.chroma] += int(note.duration) + 1
                 # Normal weight for normal beats
                 else:
-                    note_count[note_index] += int(note['duration'])
+                    note_count[note.chroma] += int(note.duration)
             except KeyError:
                 pass
 
