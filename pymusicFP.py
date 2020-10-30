@@ -1,10 +1,18 @@
 import knowledgeBase as kb
+import pprint
+
+
+class Measure:
+
+    def __init__(self, xml_measure: dict):
+        print('created measure')
+        pprint.pprint(xml_measure)
+        self.notes = []
 
 
 # Calculate the music)xml dominant key
-def dominant_key(music_xml_data: dict):
+def dominant_key(measures: [dict]):
     # note frequency calculation
-    measures = music_xml_data['score-partwise']['part']['measure']
     note_count = []
 
     for i in range(12):
@@ -13,11 +21,19 @@ def dominant_key(music_xml_data: dict):
     for measure in measures:
         for note in measure['note']:
             try:
-                if 'alter' in note['pitch'].keys():
-                    note_count[kb.NOTES.index(note['pitch']['step']) + int(note['pitch']['alter'])] += \
-                        int(note['duration'])
+                note_index = kb.NOTES.index(note['pitch']['step']) if 'alter' not in note['pitch'].keys() \
+                    else kb.NOTES.index(note['pitch']['step']) + int(note['pitch']['alter'])
+                # Extra weight for first and last note
+                if (measures.index(measure) == 0 and measure['note'].index(note) == 0) \
+                        or (measures.index(measure) == len(measures) - 1
+                            and measure['note'].index(note) == len(measure['note']) - 1):
+                    note_count[note_index] += int(note['duration']) * 2
+                # Minor extra weight for strong beat note (first note in measure)
+                elif measure['note'].index(note) == 0:
+                    note_count[note_index] += int(note['duration']) + 1
+                # Normal weight for normal beats
                 else:
-                    note_count[kb.NOTES.index(note['pitch']['step'])] += int(note['duration'])
+                    note_count[note_index] += int(note['duration'])
             except KeyError:
                 pass
 
