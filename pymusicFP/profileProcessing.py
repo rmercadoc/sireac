@@ -1,12 +1,16 @@
-def displace_profiles_by_key(offset: int, profiles_dict: dict) -> dict:
-    profiles = {}
-    if offset == 0:
-        return profiles_dict
-    for profile in profiles_dict:
-        profiles[profile] = []
-        [profiles[profile].append(prefix) for prefix in profiles_dict[profile][-offset:]]
-        [profiles[profile].append(suffix) for suffix in profiles_dict[profile][0:-offset]]
-    return profiles
+def displace_profiles_by_key(offset: int, profiles_dict: dict or list) -> dict or list:
+    if isinstance(profiles_dict, list):
+        profile = []
+        [profile.append(prefix) for prefix in profiles_dict[-offset:]]
+        [profile.append(suffix) for suffix in profiles_dict[0:-offset]]
+        return profile
+    else:
+        profiles = {}
+        for profile in profiles_dict:
+            profiles[profile] = []
+            [profiles[profile].append(prefix) for prefix in profiles_dict[profile][-offset:]]
+            [profiles[profile].append(suffix) for suffix in profiles_dict[profile][0:-offset]]
+        return profiles
 
 
 def profiles_distance(main_profile: list[float], profiles_dict: dict) -> dict:

@@ -23,10 +23,11 @@ def dominant_key(measures: [Measure]) -> Key:
             try:
                 if not note.rest:
                     # Extra weight for first and last note
-                    if (measures.index(measure) == 0 and measure.notes.index(note) == 0) \
-                            or (measures.index(measure) == len(measures) - 1
-                                and measure.notes.index(note) == len(measure.notes) - 1):
-                        note_count[note.chroma] += int(note.duration) * 2
+                    if (measures.index(measure) == 0) or (measures.index(measure) == len(measures) - 1):
+                        if note.first:
+                            note_count[note.chroma] += int(note.duration) * 6 if note.octave < 4 else int(note.duration)
+                        else:
+                            note_count[note.chroma] += int(note.duration)
                     # Minor extra weight for strong beat note (first note in measure)
                     elif measure.notes.index(note) == 0:
                         note_count[note.chroma] += int(note.duration) + 1

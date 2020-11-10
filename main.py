@@ -2,7 +2,7 @@ import xmltodict
 import json
 from pymusicFP.pymusicFP import *
 
-with open('sheetmusic/joy1.musicxml', 'r') as xml_file:
+with open('sheetmusic/anger1.musicxml', 'r') as xml_file:
     data = json.loads(json.dumps(xmltodict.parse(xml_file.read())))
 
 full_score = Score(data['score-partwise'])
@@ -15,19 +15,11 @@ print(key)
 
 chord_progression = []
 
-print('\n\tCONTEXT KEYS BY MEASURE')
+# print('\n\tCONTEXT KEYS BY MEASURE')
 for index in range(len(full_score_measures)):
     # Define harmonic context (measure)
     measure = full_score_measures[index]
-    if index == 0:
-        context = full_score_measures[0:2]
-    elif index == len(full_score_measures) - 1:
-        context = full_score_measures[-2:]
-    else:
-        context = full_score_measures[index-1:index+2]
-    context_key = dominant_key(context)
     beat_length = measure.duration / measure.attributes.numerator
-    print('{:>20} | {} | {} | {}'.format(str(context_key), measure.duration, measure.attributes.numerator, beat_length))
 
     # get measure notes by beats
     beats_notes = [[] for beat in range(measure.attributes.numerator)]
@@ -50,22 +42,26 @@ for index in range(len(full_score_measures)):
 
     # Get chord per beat or extended beat context
     measure_chords = []
+
     extended_beat_context = None
     for beat_index in range(len(beats_notes)):
         beat_notes = beats_notes[beat_index]
         last_beat = beat_index == len(beats_notes) - 1
+
         if extended_beat_context is None:
-            beat_context = {note.chroma for note in beat_notes}
+            beat_context = [note for note in beat_notes]
         else:
             beat_context = extended_beat_context
-            [beat_context.add(note.chroma) for note in beat_notes]
+            [beat_context.append(note) for note in beat_notes]
 
-        # chord = Chord(beat_context, key, context_key)
+        for note in beat_context:
+            if beat_index == 0:
+                note.duration += 1
+
         chord = Chord(beat_context, key)
 
         if chord.quality is None and len(measure_chords) > 0:
-            [beat_context.add(note) for note in measure_chords[-1].notes]
-            # chord = Chord(beat_context, key, context_key)
+            [beat_context.append(note) for note in measure_chords[-1].notes]
             chord = Chord(beat_context, key)
 
         if chord.quality is None and not last_beat:
@@ -80,4 +76,4 @@ for index in range(len(full_score_measures)):
     chord_progression.append(measure_chords)
 
 print('\nCHORD PROGRESSION PER MEASURE')
-[print(x) for x in chord_progression]
+[print('{:3} | {:}'.format(chord_progression.index(x) + 1, x)) for x in chord_progression]

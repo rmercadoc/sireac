@@ -21,6 +21,7 @@ class Measure:
         if isinstance(xml_notes, list):
             notes = []
             for note in xml_notes:
-                notes.append(Note(note))
+                staff_notes = list(filter(lambda x: x['staff'] == note['staff'], xml_notes))
+                notes.append(Note(note)) if staff_notes.index(note) != 0 else notes.append(Note(note, True))
             return notes
-        return [Note(xml_notes)]
+        return [Note(xml_notes, True)]
