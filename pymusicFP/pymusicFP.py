@@ -28,12 +28,11 @@ def dominant_key(measures: [Measure]) -> Key:
                             note_count[note.chroma] += int(note.duration) * 6 if note.octave < 4 else int(note.duration)
                         else:
                             note_count[note.chroma] += int(note.duration)
-                    # Minor extra weight for strong beat note (first note in measure)
-                    elif measure.notes.index(note) == 0:
-                        note_count[note.chroma] += int(note.duration) + 1
                     # Normal weight for normal beats
                     else:
-                        note_count[note.chroma] += int(note.duration)
+                        # Minor extra weight for strong beat note (first note in measure)
+                        note_count[note.chroma] += int(note.duration) + 1 if note.first else int(note.duration)
+
             except KeyError:
                 pass
 

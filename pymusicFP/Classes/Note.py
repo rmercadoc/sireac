@@ -17,6 +17,7 @@ class Note:
     def init_chroma(xml_pitch: dict) -> int:
         chroma = kb.NOTES.index(xml_pitch['step'])
         chroma += int(xml_pitch['alter']) if 'alter' in xml_pitch.keys() else 0
+        chroma -= 12 if chroma > 11 else 0
         chroma += 12 if chroma < 0 else 0
         return chroma
 
