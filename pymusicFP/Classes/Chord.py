@@ -7,20 +7,49 @@ from pymusicFP import config
 class Chord:
     def __init__(self, notes: list[Note], key: Key):
         self.notes: list = notes
-        self.notes_set: set = self.init_notes_set()
-        self.identity_vector = self.init_chord_def()
         self.key = key
-        self.chroma_distances = self.get_chroma_distances()
-        self.min_chroma_distances = self.get_min_chroma_distances()
-        self.root_chroma = self.identify_chord_root()
         self.closest_chord_qualities, self.quality = self.identify_chord_quality()
-        self.scale_degree = key.scale_degrees[self.root_chroma]
 
-    def init_chord_def(self):
-        return [1 if x in self.notes_set else 0 for x in range(12)]
+    @property
+    def notes(self):
+        return self._notes
 
-    def init_notes_set(self):
-        return {x.chroma for x in self.notes}
+    @notes.setter
+    def notes(self, value):
+        if not isinstance(value, list):
+            raise TypeError
+        self._notes = value
+        self.notes_set = {x.chroma for x in self.notes}
+        self.identity_vector = [1 if x in self.notes_set else 0 for x in range(12)]
+        try:
+            self.closest_chord_qualities, self.quality = self.identify_chord_quality()
+        except AttributeError:
+            pass
+
+    @property
+    def key(self):
+        return self._key
+
+    @key.setter
+    def key(self, value):
+        self._key = value
+        self.closest_chord_qualities, self.quality = self.identify_chord_quality()
+
+    @property
+    def chroma_distances(self):
+        return self.get_chroma_distances()
+
+    @property
+    def min_chroma_distances(self):
+        return self.get_min_chroma_distances()
+
+    @property
+    def root_chroma(self):
+        return self.identify_chord_root()
+
+    @property
+    def scale_degree(self):
+        return self.key.scale_degrees[self.root_chroma]
 
     def get_chroma_distances(self):
         chroma_distances = {}
@@ -94,5 +123,19 @@ class Chord:
         # print(closest_qualities)
         return closest_qualities, closest_qualities[0] if len(closest_qualities) == 1 else None
 
+    def __iter__(self):
+        return iter(self.notes)
+
+    def append(self, element):
+        self.notes.append(element)
+
     def __repr__(self):
-        return self.scale_degree + ' (' + kb.NOTES[self.root_chroma] + self.quality + ')'
+        return self.scale_degree + ' ' + self.quality if self.quality != '' else self.scale_degree
+
+    def __eq__(self, other):
+        if not isinstance(other, Chord):
+            return NotImplemented
+        if (self.root_chroma == other.root_chroma and self.quality == other.quality) or (
+                self.notes_set <= other.notes_set or self.notes_set >= other.notes_set):
+            return True
+        return False

@@ -52,4 +52,4 @@ CHORD_PROFILES = {
     'dim7':         [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
 }
 
-SCALE_DEGREES = ['I', 'IIb', 'II', 'IIIb', 'III', 'IV', 'IV#/Vb', 'V', 'VIb', 'VI', 'VIIb', 'IV']
+SCALE_DEGREES = ['I', 'IIb', 'II', 'IIIb', 'III', 'IV', 'IV#/Vb', 'V', 'VIb', 'VI', 'VIIb', 'VII']

@@ -1,6 +1,9 @@
 import xmltodict
 import json
+import pprint
 from pymusicFP.pymusicFP import *
+
+sentiments = ['anger', 'fear', 'love', 'joy', 'sadness', 'surprise']
 
 
 def mir(file_name):
@@ -17,6 +20,7 @@ def mir(file_name):
     key = dominant_key(full_score_measures)
     print('\tKEY + SCALE:', '\n\t\t', key)
 
+    chord_progression_per_beat = []
     chord_progression = []
 
     # print('\n\tCONTEXT KEYS BY MEASURE')
@@ -68,7 +72,7 @@ def mir(file_name):
             chord = Chord(beat_context, key)
 
             if chord.quality is None and len(measure_chords) > 0:
-                [beat_context.append(note) for note in measure_chords[-1].notes]
+                [beat_context.append(note) for note in measure_chords[-1]]
                 chord = Chord(beat_context, key)
 
             if chord.quality is None and not last_beat:
@@ -80,14 +84,32 @@ def mir(file_name):
             extended_beat_context = None
             measure_chords.append(chord)
 
-        chord_progression.append(measure_chords)
+        # measure chord prune
+        pruned_chords = [measure_chords[0]]
 
-    print('\tCHORD PROGRESSION PER MEASURE:')
-    [print('\t\t{:3} | {:}'.format(chord_progression.index(x) + 1, x)) for x in chord_progression]
+        for i in range(1, len(measure_chords)):
+            if measure_chords[i] != pruned_chords[-1]:
+                pruned_chords.append(measure_chords[i])
+            else:
+                [pruned_chords[-1].append(x) for x in measure_chords[i]]
+
+        chord_progression_per_beat.append(pruned_chords)
+        [chord_progression.append(chord) for chord in pruned_chords]
+
+    print('\tCHORD PROGRESSION:')
+    # [print('\t\t{:3} | {:}'.format(i+1, chord_progression_per_beat[i]))
+    # for i in range(len(chord_progression_per_beat))]
+    print('\t', chord_progression)
     print('-' * bar_size, '\n')
+    return {
+        'file': file_name,
+        'chord_progression': chord_progression
+    }
 
 
-sentiments = ['anger', 'fear', 'love', 'joy', 'sadness', 'surprise']
+music_information = []
 
 for sentiment in sentiments:
-    [mir(sentiment + str(x + 1) + '.musicxml') for x in range(8)]
+    [music_information.append(mir(sentiment + str(x + 1) + '.musicxml')) for x in range(8)]
+
+[print(x) for x in music_information]
