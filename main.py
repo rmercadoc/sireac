@@ -1,115 +1,112 @@
-import xmltodict
-import json
-import pprint
-from pymusicFP.pymusicFP import *
+from client_credentials import url as base_url
+from http_request import http_request
+from typing import Any
+from itertools import product
+
+
+def find(needle: Any, haystack: list):
+    if not isinstance(needle, list):
+        needle = [needle]
+    index_pos_list = []
+    index_pos = 0
+    while True:
+        try:
+            index_pos = haystack.index(needle[0], index_pos)
+            if haystack[index_pos:index_pos + len(needle)] == needle:
+                index_pos_list.append(index_pos)
+            index_pos += 1
+        except ValueError as e:
+            break
+    return index_pos_list if len(index_pos_list) > 0 else []
+
+
+def get_frequents(needles: list or set, haystack: list, min_sup: float = 0.2):
+    frequent = []
+    # n = sum([len(e) for e in haystack])  # / len(haystack)
+    # print('n', n)
+    for needle in needles:
+        count = 0
+        for element in haystack:
+            # count += len(find(needle, element))
+            count += 1 if find(needle, element) else 0
+        # print('count', count)
+        # if (count / n) > min_sup:
+        if (count / len(haystack)) >= min_sup:
+            frequent.append([needle]) if not isinstance(needle, list) else frequent.append(needle)
+    # print('GET FREQUENTS |', '\n\t' + str(needles), '\n\t' + str(haystack), '\n\t' + str(frequent))
+    return frequent
+
+
+def generate_valid_products(elements: list, length: int, valid_rules: list):
+    valid = []
+    # p_list = list(product(elements, repeat=length))
+    p_list = []
+    minor_len_rules = []
+    for rule in valid_rules:
+        if len(rule) == length - 1:
+            for e in elements:
+                test = [r for r in rule]
+                test.append(e)
+                p_list.append(test)
+
+    # print(p_list)
+    for p in p_list:
+        frequent_children = True
+        for index in range(len(list(p))):
+            if list(p)[index:index + (length - 1)] not in valid_rules:
+                frequent_children = False
+                break
+        if frequent_children:
+            valid.append(list(p))
+    # print(valid)
+    return valid
+
 
 sentiments = ['anger', 'fear', 'love', 'joy', 'sadness', 'surprise']
-
-
-def mir(file_name):
-    bar_size = 100
-    print('-' * bar_size, '\n', 'FILE:', file_name)
-    with open('sheetmusic/' + file_name, 'r') as xml_file:
-        data = json.loads(json.dumps(xmltodict.parse(xml_file.read())))
-
-    full_score = Score(data['score-partwise'])
-
-    full_score_measures = []
-    [[full_score_measures.append(measure) for measure in part.measures] for part in full_score.parts]
-
-    key = dominant_key(full_score_measures)
-    print('\tKEY + SCALE:', '\n\t\t', key)
-
-    chord_progression_per_beat = []
-    chord_progression = []
-
-    # print('\n\tCONTEXT KEYS BY MEASURE')
-    for index in range(len(full_score_measures)):
-        # Define harmonic context (measure)
-        measure = full_score_measures[index]
-        beat_length = measure.duration / measure.attributes.numerator
-
-        # get measure notes by beats
-        beats_notes = [[] for beat in range(measure.attributes.numerator)]
-
-        for staff in measure.attributes.staves:
-            time = 0
-            for note_index in range(len(measure.notes)):
-                note = measure.notes[note_index]
-                if time >= measure.duration:
-                    break
-                if note.staff == staff['@number']:
-                    start_beat = int(time // beat_length)
-                    offset = int(note.duration // beat_length)
-                    for beat in range(offset) if offset > 0 else range(1):
-                        beats_notes[start_beat + beat].append(note) if not note.rest else None
-                    try:
-                        time += note.duration if not measure.notes[note_index + 1].chord else 0
-                    except IndexError:
-                        time += note.duration
-
-        # Get chord per beat or extended beat context
-        measure_chords = []
-
-        extended_beat_context = None
-        for beat_index in range(len(beats_notes)):
-            beat_notes = beats_notes[beat_index]
-            last_beat = beat_index == len(beats_notes) - 1
-
-            if extended_beat_context is None:
-                beat_context = [note for note in beat_notes]
-            else:
-                beat_context = extended_beat_context
-                [beat_context.append(note) for note in beat_notes]
-
-            for note in beat_context:
-                if beat_index == 0:
-                    note.duration += 1
-
-            if not beat_context:
-                continue
-
-            chord = Chord(beat_context, key)
-
-            if chord.quality is None and len(measure_chords) > 0:
-                [beat_context.append(note) for note in measure_chords[-1]]
-                chord = Chord(beat_context, key)
-
-            if chord.quality is None and not last_beat:
-                extended_beat_context = beat_context
-                continue
-            elif chord.quality is None and last_beat:
-                chord.quality = chord.closest_chord_qualities[0]
-
-            extended_beat_context = None
-            measure_chords.append(chord)
-
-        # measure chord prune
-        pruned_chords = [measure_chords[0]]
-
-        for i in range(1, len(measure_chords)):
-            if measure_chords[i] != pruned_chords[-1]:
-                pruned_chords.append(measure_chords[i])
-            else:
-                [pruned_chords[-1].append(x) for x in measure_chords[i]]
-
-        chord_progression_per_beat.append(pruned_chords)
-        [chord_progression.append(chord) for chord in pruned_chords]
-
-    print('\tCHORD PROGRESSION:')
-    # [print('\t\t{:3} | {:}'.format(i+1, chord_progression_per_beat[i]))
-    # for i in range(len(chord_progression_per_beat))]
-    print('\t', chord_progression)
-    print('-' * bar_size, '\n')
-    return {
-        'file': file_name,
-        'chord_progression': chord_progression
-    }
-
-
-music_information = []
+min_sup = 0.17
 
 for sentiment in sentiments:
-    [music_information.append(mir(sentiment + str(x + 1) + '.musicxml')) for x in range(8)]
+    print('-'*50)
+    print(sentiment.upper())
+    print('\nREQUESTING DATA TO ' + base_url)
+    request, data = http_request(base_url, '/api/mir/' + sentiment)
+    print('GOT DATA\n') if request.getcode() == 200 else exit(str(request.getcode()) + ' - CONNECTION ERROR')
+    pieces = list(data)
 
-[print(x) for x in music_information]
+    if len(pieces) == 0:
+        continue
+
+    chords = set()
+    for piece in pieces:
+        [chords.add(chord) for chord in piece['chord_progression']]
+
+    chord_progressions = [piece['chord_progression'] for piece in pieces]
+
+    min_sup = (2 / len(pieces))
+
+    frequent_rules = []
+    frequent_chords = []
+    for f in get_frequents(chords, chord_progressions, min_sup):
+        if f not in frequent_rules:
+            frequent_rules.append(f)
+            frequent_chords.append(f[0])
+
+    print(len(frequent_rules), frequent_rules)
+
+    i = 1
+    while True:
+        i += 1
+        print('i =', i)
+        new = []
+        valid_permutations = generate_valid_products(frequent_chords, i, frequent_rules)
+        for f in get_frequents(valid_permutations, chord_progressions, min_sup):
+            if f not in frequent_rules:
+                frequent_rules.append(f)
+                new.append(f)
+        print(len(new), new)
+        if not new:
+            break
+
+    print('FINAL n=' + str(len(frequent_rules)), ' |', frequent_rules)
+
+    print('-' * 50)

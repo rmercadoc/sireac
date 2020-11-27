@@ -132,3 +132,5 @@ dmypy.json
 # Sheet Music for testing (MusicXML files)
 /sheetmusic
 .musicxml
+
+client_credentials.py
