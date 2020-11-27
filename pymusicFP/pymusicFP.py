@@ -74,6 +74,7 @@ def mir(file: str):
 
     chord_progression_per_beat = []
     chord_progression = []
+    chord_progression_by_degree = []
 
     # print('\n\tCONTEXT KEYS BY MEASURE')
     for index in range(len(full_score_measures)):
@@ -147,6 +148,7 @@ def mir(file: str):
 
         chord_progression_per_beat.append(pruned_chords)
         [chord_progression.append(str(chord)) for chord in pruned_chords]
+        [chord_progression_by_degree.append(str(chord).split()[0]) for chord in pruned_chords]
 
     print('\tCHORD PROGRESSION:')
     # [print('\t\t{:3} | {:}'.format(i+1, chord_progression_per_beat[i]))
@@ -156,5 +158,6 @@ def mir(file: str):
     return {
         'name': file.split("/")[-1].replace('.musicxml', ''),
         'dominant_key': str(key),
-        'chord_progression': chord_progression
+        'chord_progression': chord_progression_by_degree,
+        'chord_progression_detail': chord_progression
     }
