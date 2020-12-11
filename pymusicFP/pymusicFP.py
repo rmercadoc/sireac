@@ -6,11 +6,18 @@ from pymusicFP.Classes.Attributes import Attributes
 from pymusicFP.Classes.Chord import Chord
 from pymusicFP.Classes.Key import Key
 from pymusicFP import knowledgeBase as kb
-
 from pymusicFP.profileProcessing import *
+from printer import printer
 
 import json
 import xmltodict
+
+_log_prefix = '[MIR] >'
+_log_width = 80
+
+
+def log(*args, center: str = None):
+    printer(*args, prefix=_log_prefix, width=_log_width, center=center)
 
 
 # Calculate the musicXML dominant key
@@ -58,9 +65,12 @@ def dominant_key(measures: [Measure]) -> Key:
     return key
 
 
-def mir(file: str):
-    bar_size = 100
-    print('-' * bar_size, '\n', 'FILE:', file)
+def mir(file: str, log_width: int = 80, verbose: bool = False):
+    global _log_width
+    _log_width=log_width
+    if verbose:
+        log(' MUSIC INFORMATION RETRIEVAL (MIR) ', center='*')
+        log('FILE:', file)
     with open(file, 'r') as xml_file:
         data = json.loads(json.dumps(xmltodict.parse(xml_file.read())))
 
@@ -70,7 +80,8 @@ def mir(file: str):
     [[full_score_measures.append(measure) for measure in part.measures] for part in full_score.parts]
 
     key = dominant_key(full_score_measures)
-    print('\tKEY + SCALE:', '\n\t\t', key)
+    if verbose:
+        log('\tKEY + SCALE:', '\n\t\t', key)
 
     chord_progression_per_beat = []
     chord_progression = []
@@ -150,11 +161,14 @@ def mir(file: str):
         [chord_progression.append(str(chord)) for chord in pruned_chords]
         [chord_progression_by_degree.append(str(chord).split()[0]) for chord in pruned_chords]
 
-    print('\tCHORD PROGRESSION:')
-    # [print('\t\t{:3} | {:}'.format(i+1, chord_progression_per_beat[i]))
-    # for i in range(len(chord_progression_per_beat))]
-    print('\t', chord_progression)
-    print('-' * bar_size, '\n')
+    if verbose:
+        log('\tCHORD PROGRESSION:')
+        # [print('\t\t{:3} | {:}'.format(i+1, chord_progression_per_beat[i]))
+        # for i in range(len(chord_progression_per_beat))]
+        log('\t', chord_progression_by_degree)
+        log('\tDETAILED CHORD PROGRESSION:')
+        log('\t', chord_progression)
+        log(' MIR END ', center='*')
     return {
         'name': file.split("/")[-1].replace('.musicxml', ''),
         'dominant_key': str(key),

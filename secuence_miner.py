@@ -1,7 +1,14 @@
 from client_credentials import url as base_url
 from http_request import http_request
 from typing import Any
-from itertools import product
+from printer import printer
+
+_log_prefix = '[CSM] >'
+_log_width = 80
+
+
+def log(*args, center: str = None):
+    printer(*args, prefix=_log_prefix, width=_log_width, center=center)
 
 
 def find(needle: Any, haystack: list):
@@ -22,24 +29,17 @@ def find(needle: Any, haystack: list):
 
 def get_frequents(needles: list or set, haystack: list, min_sup: float = 0.2):
     frequent = []
-    # n = sum([len(e) for e in haystack])  # / len(haystack)
-    # print('n', n)
     for needle in needles:
         count = 0
         for element in haystack:
-            # count += len(find(needle, element))
             count += 1 if find(needle, element) else 0
-        # print('count', count)
-        # if (count / n) > min_sup:
         if (count / len(haystack)) >= min_sup:
             frequent.append([needle]) if not isinstance(needle, list) else frequent.append(needle)
-    # print('GET FREQUENTS |', '\n\t' + str(needles), '\n\t' + str(haystack), '\n\t' + str(frequent))
     return frequent
 
 
 def generate_valid_products(elements: list, length: int, valid_rules: list):
     valid = []
-    # p_list = list(product(elements, repeat=length))
     p_list = []
     minor_len_rules = []
     for rule in valid_rules:
@@ -49,7 +49,6 @@ def generate_valid_products(elements: list, length: int, valid_rules: list):
                 test.append(e)
                 p_list.append(test)
 
-    # print(p_list)
     for p in p_list:
         frequent_children = True
         for index in range(len(list(p))):
@@ -58,29 +57,36 @@ def generate_valid_products(elements: list, length: int, valid_rules: list):
                 break
         if frequent_children:
             valid.append(list(p))
-    # print(valid)
     return valid
 
 
-sentiments = ['anger', 'fear', 'love', 'joy', 'sadness', 'surprise']
-min_sup = 0.17
+def generate_rules(params: dict, detailed_chords: bool = False, log_width: int = 80, verbose: bool = False):
+    global _log_width
+    _log_width = log_width
+    progression_type = 'chord_progression_detail' if detailed_chords else 'chord_progression'
+    if verbose:
+        log(' CHORD SEQUENCE MINER (CSM) ', center='/')
+        log('Gathering data from knowledge base ...')
+        log(' -[ API CONSUMPTION ]- ', center='-')
+    request, data = http_request(base_url, '/api/mir/search', 'POST', body=params, verbose=verbose,
+                                 log_width=log_width)
+    if verbose:
+        log('RESPONSE STATUS 200 OK. GOT DATA') if request.getcode() == 200 else \
+            exit(str(request.getcode()) + ' - CONNECTION ERROR')
+        log(' -[ API CONSUMPTION END ]- ', center='-')
+        log('Successfully gathered data from knowledge base!')
 
-for sentiment in sentiments:
-    print('-'*50)
-    print(sentiment.upper())
-    print('\nREQUESTING DATA TO ' + base_url)
-    request, data = http_request(base_url, '/api/mir/' + sentiment)
-    print('GOT DATA\n') if request.getcode() == 200 else exit(str(request.getcode()) + ' - CONNECTION ERROR')
+        log(' => RULE GENERATOR <= ', center='-')
     pieces = list(data)
 
     if len(pieces) == 0:
-        continue
+        return []
 
     chords = set()
     for piece in pieces:
-        [chords.add(chord) for chord in piece['chord_progression']]
+        [chords.add(chord) for chord in piece[progression_type]]
 
-    chord_progressions = [piece['chord_progression'] for piece in pieces]
+    chord_progressions = [piece[progression_type] for piece in pieces]
 
     min_sup = (2 / len(pieces))
 
@@ -91,22 +97,28 @@ for sentiment in sentiments:
             frequent_rules.append(f)
             frequent_chords.append(f[0])
 
-    print(len(frequent_rules), frequent_rules)
+    if verbose:
+        log('{:3}|{:3}|{:<}'.format('l'.center(3), 'n'.center(3),
+                                    'chord sequences'.center(log_width - 8 - len(_log_prefix))))
+        log('{:3}|{:3}| {:<}'.format(1, len(frequent_rules), str(frequent_rules)))
 
     i = 1
     while True:
         i += 1
-        print('i =', i)
         new = []
         valid_permutations = generate_valid_products(frequent_chords, i, frequent_rules)
         for f in get_frequents(valid_permutations, chord_progressions, min_sup):
             if f not in frequent_rules:
                 frequent_rules.append(f)
                 new.append(f)
-        print(len(new), new)
         if not new:
             break
+        if verbose:
+            log('{:3}|{:3}| {:<}'.format(i, len(new), str(new)))
 
-    print('FINAL n=' + str(len(frequent_rules)), ' |', frequent_rules)
+    if verbose:
+        log('{:>3}|{:3}|'.format('T', len(frequent_rules)))
+        log(' => END OF RULE GENERATION <= ', center='-')
+        log(' CSM END ', center='/')
 
-    print('-' * 50)
+    return frequent_rules

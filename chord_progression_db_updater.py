@@ -14,10 +14,10 @@ for sentiment in sentiments:
 
 [print(x) for x in music_information]
 
-json_data = json.dumps({'data': music_information})
+json_data = {'data': music_information}
 
 print('\nREQUESTING ACCES TO MUSERES API')
-response, auth = http_request(url, '/oauth/token', "POST", body=json.dumps(client_credentials))
+response, auth = http_request(url, '/oauth/token', "POST", body=client_credentials, verbose=True)
 if response.getcode() == 200:
     print('MUSERES API ACCESS GRANTED\n')
 else:
@@ -27,7 +27,7 @@ else:
 headers = {'Content-Type': 'application/json', 'Authorization': auth['token_type'] + ' ' + auth['access_token']}
 
 print('\nREQUESTING MUSERES API TO UPDATE CHORD PROGRESSIONS ON DB WITH DATA:\n', json_data)
-response, data = http_request(url, '/api/mir/update', "PUT", headers, json_data)
+response, data = http_request(url, '/api/mir/update', "PUT", headers, json_data, verbose=True)
 if response.getcode() == 200:
     print('DB CHORD PROGRESSIONS UPDATED')
 else:
