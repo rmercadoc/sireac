@@ -2,6 +2,7 @@ def printer(*args, prefix: str = '>', width: int = None, center: str = None):
     final_str = ''
     for arg in args:
         final_str += str(arg) + ' '
+    final_str = final_str[:-1]
     str_list = final_str.split('\n')
     for line in str_list:
         if center:

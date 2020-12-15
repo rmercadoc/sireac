@@ -54,7 +54,7 @@ def main(argv):
             sentiments[opt.replace('-', '')] = arg
 
     if verbose:
-        print('[START}:', start_time)
+        print('[START]:', start_time)
         print('-'*_log_width)
         print('888b     d888 888     888  .d8888b.  8888888888 8888888b.  8888888888 .d8888b.  ')
         print('8888b   d8888 888     888 d88P  Y88b 888        888   Y88b 888       d88P  Y88b ')
