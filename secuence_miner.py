@@ -3,7 +3,7 @@ from http_request import http_request
 from typing import Any
 from printer import printer
 
-_log_prefix = '[CSM] >'
+_log_prefix = '[CSM]'
 _log_width = 80
 _dataset = None
 
@@ -46,7 +46,10 @@ class Rule:
             return self._name == other
 
     def __ne__(self, other):
-        return not self == other
+        if isinstance(other, list):
+            return self._chord_list != other
+        else:
+            return self._name != other
 
     def __contains__(self, item):
         return item in self._chord_list
@@ -65,6 +68,24 @@ class Rule:
 
     def __format__(self, format_spec):
         return format(str(self), format_spec)
+
+    def __getitem__(self, item):
+        return self._chord_list[item]
+
+    def __setitem__(self, key, value):
+        self._chord_list[key] = value
+
+    def __gt__(self, other):
+        return len(self) > len(other)
+
+    def __ge__(self, other):
+        return len(self) >= len(other)
+
+    def __lt__(self, other):
+        return len(self) < len(other)
+
+    def __le__(self, other):
+        return len(self) <= len(other)
 
 
 def log(*args, center: str = None):
@@ -116,10 +137,11 @@ def generate_valid_products(elements: list, length: int, valid_rules: list):
     return valid
 
 
-def generate_rules(params: dict, detailed_chords: bool = False, log_width: int = 80, verbose: bool = False):
+def generate_rules(params: dict, progression_type: str = 'chord_progression',
+                   log_width: int = 80, verbose: bool = False):
+    global _log_prefix
     global _log_width
     _log_width = log_width
-    progression_type = 'chord_progression_detail' if detailed_chords else 'chord_progression'
     if verbose:
         log(' CHORD SEQUENCE MINER (CSM) ', center='/')
         log('Gathering data from knowledge base (KB) ...')
@@ -130,7 +152,7 @@ def generate_rules(params: dict, detailed_chords: bool = False, log_width: int =
         if verbose:
             log('GET all data from KB ...')
         request, data = http_request(base_url, '/api/mir/search', 'POST', body={}, verbose=verbose,
-                                     log_width=log_width)
+                                     log_width=log_width, log_prefix=_log_prefix)
         _dataset = [piece[progression_type] for piece in list(data)]
         if verbose:
             log('RESPONSE STATUS 200 OK. GOT DATA') if request.getcode() == 200 else \
@@ -169,6 +191,13 @@ def generate_rules(params: dict, detailed_chords: bool = False, log_width: int =
             frequent_rules.append(f)
             frequent_chords.append(str(f))
 
+    if len(frequent_rules) < 1:
+        if verbose:
+            log('No rules found.\nExiting Rule Generator')
+            log(' => END OF RULE GENERATION <= ', center='-')
+            log(' CSM END ', center='/')
+        return []
+
     if verbose:
         log(frequent_rules)
         log(frequent_chords)
@@ -191,12 +220,12 @@ def generate_rules(params: dict, detailed_chords: bool = False, log_width: int =
         if verbose:
             log('{:3}|{:3}| {:<}'.format(i, len(new), str(new)))
 
+    frequent_rules.sort(key=lambda x: (x.confidence, x.support, x.lift), reverse=True)
     if verbose:
         log('{:>3}|{:3}|'.format('T', len(frequent_rules)))
         log(' => END OF RULE GENERATION <= ', center='-')
         log(' * Rule List * ', center=' ')
         log('{:^30s} | {:^10s} | {:^10s} | {:^10s}'.format('RULE', 'SUPPORT', 'CONFIDENCE', 'LIFT'))
-        frequent_rules.sort(key = lambda x: (x.confidence, x.support, x.lift), reverse=True)
         for rule in frequent_rules:
             log('{:30s} | {:10.4f} | {:10.4f} | {:10.4f}'.format(rule, rule.support, rule.confidence, rule.lift))
         log(' CSM END ', center='/')

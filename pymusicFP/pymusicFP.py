@@ -7,12 +7,12 @@ from pymusicFP.Classes.Chord import Chord
 from pymusicFP.Classes.Key import Key
 from pymusicFP import knowledgeBase as kb
 from pymusicFP.profileProcessing import *
-from printer import printer
+from printer import printer,  prepare_log
 
 import json
 import xmltodict
 
-_log_prefix = '[MIR] >'
+_log_prefix = '[MIR]'
 _log_width = 80
 
 
@@ -65,9 +65,10 @@ def dominant_key(measures: [Measure]) -> Key:
     return key
 
 
-def mir(file: str, log_width: int = 80, verbose: bool = False):
-    global _log_width
-    _log_width=log_width
+def mir(file: str, log_width: int = 80, verbose: bool = False, log_prefix: str or list = None):
+    global _log_width, _log_prefix
+    _log_width, _log_prefix = prepare_log(_log_width, log_width, _log_prefix, log_prefix)
+
     if verbose:
         log(' MUSIC INFORMATION RETRIEVAL (MIR) ', center='*')
         log('FILE:', file)

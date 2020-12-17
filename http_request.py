@@ -1,9 +1,9 @@
 import http.client
 import json
 import ssl
-from printer import printer
+from printer import printer, prepare_log
 
-_log_prefix = '[HTTP-CLIENT] >'
+_log_prefix = '[HTTP]'
 _log_width = 80
 
 
@@ -12,9 +12,9 @@ def log(*args, center: str = None):
 
 
 def http_request(base_url: str, url: str, method: str = 'GET', headers: dict = None, body: dict = None,
-                 verbose: bool = False, log_width=80):
-    global _log_width
-    _log_width = log_width
+                 verbose: bool = False, log_width=80, log_prefix: str or list = None):
+    global _log_width, _log_prefix
+    _log_width, _log_prefix = prepare_log(_log_width, log_width, _log_prefix, log_prefix)
 
     if headers is None:
         headers = {'Content-Type': 'application/json'}
