@@ -1,6 +1,8 @@
 import getopt
 import sys
 import json
+import pymusicFP.knowledgeBase as kb
+from pymusicFP.profileProcessing import displace_profiles_by_key
 from secuence_miner import generate_rules
 from pymusicFP.pymusicFP import mir
 from printer import printer
@@ -10,6 +12,87 @@ from itertools import combinations
 _log_prefix = '>'
 _log_width = 80
 
+_detail = False
+
+
+class Recommendation:
+
+    def __init__(self, recommended_chords: list[str], mir: dict = None):
+        self._mir = mir
+        self._recommended_chords = recommended_chords
+
+    @property
+    def chords(self):
+        if self._mir:
+            return [RecommendedChord(chord, self._mir['dominant_key']) for chord in self._recommended_chords]
+        else:
+            return [RecommendedChord(chord) for chord in self._recommended_chords]
+
+    @property
+    def __dict__(self):
+        if self._mir:
+            return {
+                'detected_dominant_key': self._mir['dominant_key'],
+                'chord_recommendations': [x.__dict__ for x in self.chords]
+            }
+        else:
+            return {
+                'chord_recommendations': [x.__dict__ for x in self.chords]
+            }
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return str(self.__dict__)
+
+
+class RecommendedChord:
+
+    def __init__(self, chord_degree: str, dominant_key: str = None):
+        self._dominant_key = dominant_key
+        self.key = dominant_key.split(' ')[0] if dominant_key else ''
+        if dominant_key:
+            self.scale = dominant_key.split(' ')[1] if len(dominant_key.split(' ')) > 1 else ''
+        self._chord_degree = chord_degree.split(' ')[0]
+        self._chord_quality = chord_degree.split(' ')[1] if len(chord_degree.split(' ')) > 1 else ''
+
+    @property
+    def key_index(self):
+        if self._dominant_key:
+            return kb.NOTES.index(self.key)
+        else:
+            return
+
+    @property
+    def name(self):
+        if self._dominant_key:
+            displaced_degrees = displace_profiles_by_key(self.key_index, kb.SCALE_DEGREES)
+            return kb.NOTES[displaced_degrees.index(self._chord_degree)] + self._chord_quality
+        else:
+            return
+
+    @property
+    def degree(self):
+        return self._chord_degree + ' ' + self._chord_quality if self._chord_quality else self._chord_degree
+
+    @property
+    def __dict__(self):
+        if _detail:
+            if self._dominant_key:
+                return {
+                    'degree': self.degree,
+                    'name': self.name
+                }
+            return {'degree': self.degree}
+        return self._chord_degree
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return str(self.__dict__)
+
 
 def log(*args, center: str = None):
     printer(*args, prefix=_log_prefix, width=_log_width, center=center)
@@ -18,14 +101,15 @@ def log(*args, center: str = None):
 def main(argv):
     start_time = datetime.now()
     global _log_width
+    global _detail
     score = None
+    score_mi = None
     sentiments = {}
-    detail = False
     progression_type = 'chord_progression'
     verbose = False
     recommendations_amount = 3
     try:
-        opts, args = getopt.getopt(argv, 'hs:w:dvn', ['help', 'score=', 'n=', 'width=', 'anger=', 'fear=',
+        opts, args = getopt.getopt(argv, 'hs:w:dvn:', ['help', 'score=', 'n=', 'width=', 'anger=', 'fear=',
                                                       'joy=', 'love=', 'sadness=', 'surprise='])
     except getopt.GetoptError:
         print('museres.py -s <path-to-score> --anger= --fear= --joy= --love= --sadness= --surprise=')
@@ -36,7 +120,7 @@ def main(argv):
                 '--anger=(1-5) --fear=(1-5) --joy=(1-5) --love=(1-5) --sadness=(1-5) --surprise=(1-5)')
             sys.exit()
         elif opt == '-d':
-            detail = True
+            _detail = True
             progression_type = 'chord_progression_detail'
         elif opt == '-v':
             verbose = True
@@ -54,7 +138,15 @@ def main(argv):
                 sys.exit()
             score = arg
         elif opt in ('-n', '--n'):
-            recommendations_amount = int(arg)
+            try:
+                if int(arg) > 10:
+                    raise ValueError('Max amount of recommendations is 10')
+                elif int(arg) <= 0:
+                    raise ValueError('Min amount of recommendations is 1')
+                recommendations_amount = int(arg)
+            except ValueError as e:
+                print('\tERROR:\t', e)
+                sys.exit()
         elif opt in ('-w', '--width'):
             if int(arg) > _log_width:
                 _log_width = int(arg)
@@ -90,12 +182,19 @@ def main(argv):
             log('\t\t\t }')
         else:
             log('\tsearch:\t\t\t', sentiments)
-        log('\tchord detail:\t\t', detail)
+        log('\tchord detail:\t\t', _detail)
         log('\trecommendations amount:\t', recommendations_amount, '\n')
 
     recommendations = []
 
     search_list = [sentiments]
+
+    if score:
+        if verbose:
+            log('Analyzing score, retrieving music information...')
+        score_mi = mir(score, log_width=_log_width, verbose=verbose)
+        if verbose:
+            log('Music information retrieved from score.')
 
     while len(recommendations) < recommendations_amount:
         rules = []
@@ -114,13 +213,7 @@ def main(argv):
                 log('Sorted rules!')
 
             if score:
-                if verbose:
-                    log('Analyzing score, retrieving music information...')
-                score_mi = mir(score, log_width=_log_width, verbose=verbose)
                 progression = score_mi[progression_type]
-                if verbose:
-                    log('Music information retrieved from score.')
-
                 for rule in rules:
                     if len(rule) > 1:
                         if rule[:-1] == progression[-(len(rule)-1):] or progression == rule[:-1]:
@@ -156,12 +249,17 @@ def main(argv):
                 log('Divided original search in sub-searches:')
                 [log(s) for s in search_list]
 
+    if not score:
+        recommendations = Recommendation(recommendations)
+    else:
+        recommendations = Recommendation(recommendations, mir=score_mi)
+
     if verbose:
         log(' RECOMMENDATIONS ', center='-')
-        for recommendation in recommendations:
-            log(recommendation)
+        for recommendation in recommendations.chords:
+            log('{:>8} - {:<8}'.format(recommendation.degree, recommendation.name), center=' ')
     else:
-        print(json.dumps(recommendations))
+        print(json.dumps(recommendations.__dict__))
 
     end_time = datetime.now()
     if verbose:
