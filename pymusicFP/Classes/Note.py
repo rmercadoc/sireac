@@ -2,7 +2,7 @@ from pymusicFP import knowledgeBase as kb
 
 
 class Note:
-    def __init__(self, xml_note: dict, first: bool = False):
+    def __init__(self, xml_note: dict, first: bool = False, last: bool = False):
         self.__src__: dict = xml_note
         self.chroma: int = self.init_chroma(xml_note['pitch']) if 'pitch' in xml_note.keys() else None
         self.octave: int = int(xml_note['pitch']['octave']) if 'pitch' in xml_note.keys() else None
@@ -12,6 +12,7 @@ class Note:
         self.chord: bool = 'chord' in xml_note.keys()
         self.name: str = self.init_name(xml_note['pitch']) if 'pitch' in xml_note.keys() else 'Rest'
         self.first = first
+        self.last = last
 
     @staticmethod
     def init_chroma(xml_pitch: dict) -> int:

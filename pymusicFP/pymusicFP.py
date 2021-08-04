@@ -1,13 +1,10 @@
 from pymusicFP.Classes.Score import Score
-from pymusicFP.Classes.Part import Part
 from pymusicFP.Classes.Measure import Measure
-from pymusicFP.Classes.Note import Note
-from pymusicFP.Classes.Attributes import Attributes
 from pymusicFP.Classes.Chord import Chord
 from pymusicFP.Classes.Key import Key
 from pymusicFP import knowledgeBase as kb
 from pymusicFP.profileProcessing import *
-from printer import printer,  prepare_log
+from printer import printer, prepare_log
 
 import json
 import xmltodict
@@ -23,21 +20,16 @@ def log(*args, center: str = None):
 # Calculate the musicXML dominant key
 def dominant_key(measures: [Measure]) -> Key:
     # note frequency calculation
-    note_count = []
-
-    for i in range(12):
-        note_count.append(0)
+    note_count = [0 for i in range(12)]
 
     for measure in measures:
         for note in measure.notes:
             try:
                 if not note.rest:
-                    # Extra weight for first and last note
-                    if (measures.index(measure) == 0) or (measures.index(measure) == len(measures) - 1):
-                        if note.first:
-                            note_count[note.chroma] += int(note.duration) * 6 if note.octave < 4 else int(note.duration)
-                        else:
-                            note_count[note.chroma] += int(note.duration)
+                    index = measures.index(measure)
+                    # Extra weight for first and last bass notes
+                    if ((index == 0 and note.first) or (index == len(measures) - 1 and note.last)) and note.octave < 4:
+                        note_count[note.chroma] += int(note.duration) * 6
                     # Normal weight for normal beats
                     else:
                         # Minor extra weight for strong beat note (first note in measure)
@@ -88,7 +80,7 @@ def mir(file: str, log_width: int = 80, verbose: bool = False, log_prefix: str o
     chord_progression = []
     chord_progression_by_degree = []
 
-    # print('\n\tCONTEXT KEYS BY MEASURE')
+    # CONTEXT KEYS BY MEASURE
     for index in range(len(full_score_measures)):
         # Define harmonic context (measure)
         measure = full_score_measures[index]
@@ -164,8 +156,6 @@ def mir(file: str, log_width: int = 80, verbose: bool = False, log_prefix: str o
 
     if verbose:
         log('\tCHORD PROGRESSION:')
-        # [print('\t\t{:3} | {:}'.format(i+1, chord_progression_per_beat[i]))
-        # for i in range(len(chord_progression_per_beat))]
         log('\t', chord_progression_by_degree)
         log('\tDETAILED CHORD PROGRESSION:')
         log('\t', chord_progression)
