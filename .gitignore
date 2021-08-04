@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# Sheet Music for testing (MusicXML files)
+/sheetmusic
+.musicxml
+
+client_credentials.py
